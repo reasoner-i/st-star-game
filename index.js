@@ -42,8 +42,7 @@ function addCustomButton(referenceButtonId, newButtonId, newButtonTitle, onClick
 
 // 定义你的按钮点击后要执行的操作
 function myNewButtonClickHandler() {
-  alert('新按钮被点击了！');
-  // 在这里执行你的游戏逻辑
+  triggerSlash(`/send 【手机】`);
 }
 
 function onReady(callback) {
@@ -55,5 +54,5 @@ function onReady(callback) {
 }
 
 onReady(() => {
-  addCustomButton('extensions_menu_button', 'star_game_button', '主页', myNewButtonClickHandler);
+  addCustomButton('extensionsMenuButton', 'star_game_button', '主页', myNewButtonClickHandler);
 });
