@@ -1,0 +1,13 @@
+[
+  {
+    "name": "{{user}}",
+    "age": 30,
+    "gender": "女",
+    "occupation": "学生",
+    "hobby": "读书",
+    "favoriteFood": "火锅",
+    "favoriteColor": "蓝色",
+    "favoriteAnimal": "猫",
+    "favoriteSport": "篮球"
+  }
+]

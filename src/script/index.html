@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cute Image Display - Vanilla JS</title>
+    <style>
+      :root {
+        --soft-pink: #ffdde1;
+        /* from-pink-100 */
+        --soft-lavender: #e0e7ff;
+        /* to-purple-100 (adjusted for softer purple) */
+        --muted-purple: #5d3a9b;
+        /* text-purple-700 (example) */
+        --title-pink: #ec4899;
+        /* text-pink-500 */
+        --border-lavender: #c4b5fd;
+        /* border-purple-200 */
+        --card-bg: #ffffff;
+        --loader-purple: #8b5cf6;
+        /* text-purple-500 */
+        --error-red: #dc2626;
+        /* text-red-600 */
+        --error-icon-red: #f87171;
+        /* text-red-400 */
+        --button-pink: #ec4899;
+        /* bg-pink-500 */
+        --button-pink-hover: #db2777;
+        /* hover:bg-pink-600 */
+        --button-text-color: #ffffff;
+        --icon-button-bg: rgba(255, 255, 255, 0.8);
+        --icon-button-bg-hover: #ffffff;
+        --icon-button-focus-ring: rgba(236, 72, 153, 0.75);
+        /* pink-400 with opacity */
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        /* p-4 */
+        background: linear-gradient(to bottom right, var(--soft-pink), var(--soft-lavender));
+        color: var(--muted-purple);
+        box-sizing: border-box;
+      }
+
+      @media (min-width: 640px) {
+        body {
+          padding: 24px;
+          /* sm:p-6 */
+        }
+      }
+
+      .image-card-wrapper {
+        width: 100%;
+        max-width: 672px;
+        /* max-w-2xl */
+      }
+
+      @media (min-width: 768px) {
+        .image-card-wrapper {
+          max-width: 768px;
+          /* md:max-w-3xl */
+        }
+      }
+
+      .image-card {
+        background-color: var(--card-bg);
+        border-radius: 1rem;
+        /* rounded-2xl */
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        /* shadow-xl */
+        overflow: hidden;
+        transform: scale(1);
+        transition: transform 0.3s ease-in-out;
+      }
+
+      .image-card:hover {
+        transform: scale(1.03);
+        /* hover:scale-103 */
+      }
+
+      .image-card-content {
+        padding: 20px;
+        /* p-5 */
+      }
+
+      @media (min-width: 640px) {
+        .image-card-content {
+          padding: 24px;
+          /* sm:p-6 */
+        }
+      }
+
+      .image-card-title {
+        font-size: 1.875rem;
+        /* text-2xl */
+        line-height: 2.25rem;
+        font-weight: 600;
+        /* font-semibold */
+        margin-bottom: 16px;
+        /* mb-4 */
+        color: var(--title-pink);
+        text-align: center;
+      }
+
+      @media (min-width: 640px) {
+        .image-card-title {
+          font-size: 2.25rem;
+          /* sm:text-3xl */
+          margin-bottom: 20px;
+          /* sm:mb-5 */
+        }
+      }
+
+      .image-container {
+        position: relative;
+        width: 100%;
+        border-radius: 0.75rem;
+        /* rounded-xl */
+        overflow: hidden;
+        border: 4px solid var(--border-lavender);
+        background-color: #f5f3ff;
+        /* bg-purple-50 */
+        aspect-ratio: 16 / 10;
+      }
+
+      .image-loader {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(245, 243, 255, 0.8);
+        /* bg-purple-50/80 */
+        z-index: 10;
+      }
+
+      .image-loader svg {
+        width: 40px;
+        /* h-10 w-10 (approx) */
+        height: 40px;
+        color: var(--loader-purple);
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .displayed-image {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+      }
+
+      .displayed-image.loaded {
+        opacity: 1;
+      }
+
+      .error-message-container {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        /* p-4 */
+        color: var(--error-red);
+        text-align: center;
+        background-color: rgba(245, 243, 255, 0.8);
+        /* bg-purple-50/80 */
+        z-index: 10;
+      }
+
+      .error-message-container svg {
+        width: 48px;
+        /* h-12 w-12 */
+        height: 48px;
+        margin-bottom: 8px;
+        /* mb-2 */
+        color: var(--error-icon-red);
+      }
+
+      .error-message-container p {
+        font-weight: 600;
+        /* font-semibold */
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .image-actions-overlay {
+        position: absolute;
+        bottom: 12px;
+        /* bottom-3 */
+        left: 12px;
+        /* left-3 */
+        display: flex;
+        gap: 8px;
+        /* space-x-2 */
+        z-index: 20;
+        /* Ensure buttons are on top of the image */
+      }
+
+      @media (min-width: 640px) {
+        .image-actions-overlay {
+          bottom: 16px;
+          /* sm:bottom-4 */
+          left: 16px;
+          /* sm:left-4 */
+        }
+      }
+
+      .icon-button {
+        background-color: var(--icon-button-bg);
+        color: var(--title-pink);
+        /* This color will be inherited by SVG's fill="currentColor" */
+        padding: 8px;
+        /* p-2 */
+        border-radius: 9999px;
+        /* rounded-full */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        /* shadow-md */
+        transition: all 0.15s ease-in-out;
+        width: 36px;
+        /* w-9 */
+        height: 36px;
+        /* h-9 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        /* Base size for SVGs using 1em */
+      }
+
+      .icon-button:hover {
+        background-color: var(--icon-button-bg-hover);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        /* hover:shadow-lg */
+        transform: scale(1.1);
+        /* hover:scale-110 */
+      }
+
+      .icon-button:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--icon-button-focus-ring);
+        /* focus:ring-2 focus:ring-pink-400 focus:ring-opacity-75 */
+      }
+
+      @media (min-width: 640px) {
+        .icon-button {
+          width: 40px;
+          /* sm:w-10 */
+          height: 40px;
+          /* sm:h-10 */
+          font-size: 1.125rem;
+          /* sm:text-lg for SVGs using 1em */
+        }
+      }
+
+      .learn-more-button {
+        display: block;
+        width: fit-content;
+        margin: 20px auto 0 auto;
+        /* mt-5 mx-auto */
+        padding: 10px 24px;
+        /* py-2.5 px-6 */
+        background-color: var(--button-pink);
+        color: var(--button-text-color);
+        border: 1px solid var(--button-pink-hover);
+        /* border border-pink-600 (darker shade for border) */
+        border-radius: 0.5rem;
+        /* rounded-lg */
+        font-size: 0.875rem;
+        /* text-sm */
+        font-weight: 600;
+        /* font-semibold */
+        text-align: center;
+        letter-spacing: 0.025em;
+        /* tracking-wider (approx) */
+        cursor: pointer;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        /* shadow-md */
+        transition: all 0.2s ease-out;
+      }
+
+      .learn-more-button:hover {
+        background-color: var(--button-pink-hover);
+        transform: translateY(-2px);
+        /* hover:-translate-y-0.5 (approx) */
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        /* hover:shadow-lg */
+      }
+
+      .learn-more-button:focus {
+        outline: none;
+      }
+
+      .learn-more-button:focus-visible {
+        /* For keyboard navigation accessibility */
+        box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--icon-button-focus-ring);
+        /* focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-opacity-60 */
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="image-card-wrapper">
+      <div class="image-card">
+        <div class="image-card-content">
+          <h2 id="cardTitle" class="image-card-title">My Cozy Corner</h2>
+
+          <div class="image-container" id="imageContainer">
+            <div class="image-loader" id="imageLoader">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </div>
+
+            <img id="displayedImage" class="displayed-image" alt="A cute display image" aria-busy="true" />
+
+            <div class="error-message-container hidden" id="errorMessage">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p>Sorry, the image could not be loaded.</p>
+            </div>
+
+            <div class="image-actions-overlay hidden" id="imageActionsOverlay">
+              <button class="icon-button" aria-label="Mobile view option" id="mobileButton">
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 0 24 24"
+                  style="width: 1em; height: 1em; fill: currentColor"
+                >
+                  <path
+                    d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"
+                  />
+                </svg>
+              </button>
+              <button class="icon-button" aria-label="Person view option" id="userButton">
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 0 24 24"
+                  style="width: 1em; height: 1em; fill: currentColor"
+                >
+                  <path
+                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                  />
+                </svg>
+              </button>
+              <button class="icon-button" aria-label="TV view option" id="tvButton">
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 0 24 24"
+                  style="width: 1em; height: 1em; fill: currentColor"
+                >
+                  <path
+                    d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"
+                  />
+                </svg>
+              </button>
+              <button class="icon-button" aria-label="Box view option" id="boxButton">
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 0 24 24"
+                  style="width: 1em; height: 1em; fill: currentColor"
+                >
+                  <path
+                    d="M21 5H3c-1.11 0-2 .89-2 2v10c0 1.1.89 2 2 2h18c1.1 0 2-.9 2-2V7c0-1.11-.9-2-2-2zm-2 12H5V9h14v8zM5 7h14v1H5V7z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button id="learnMoreButton" class="learn-more-button">Learn More</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const imageElement = document.getElementById('displayedImage');
+        const imageLoader = document.getElementById('imageLoader');
+        const errorMessageContainer = document.getElementById('errorMessage');
+        const imageActionsOverlay = document.getElementById('imageActionsOverlay');
+
+        const learnMoreButton = document.getElementById('learnMoreButton');
+        const mobileButton = document.getElementById('mobileButton');
+        const userButton = document.getElementById('userButton');
+        const tvButton = document.getElementById('tvButton');
+        const boxButton = document.getElementById('boxButton');
+
+        const initialImageSrc = '../../resources/bedroom.jpg'; // Default image
+
+        if (
+          !imageElement ||
+          !imageLoader ||
+          !errorMessageContainer ||
+          !imageActionsOverlay ||
+          !learnMoreButton ||
+          !mobileButton ||
+          !userButton ||
+          !tvButton ||
+          !boxButton
+        ) {
+          console.error('One or more essential elements are missing from the DOM.');
+          if (imageLoader) imageLoader.classList.add('hidden');
+          if (errorMessageContainer) {
+            errorMessageContainer.classList.remove('hidden');
+            const p = errorMessageContainer.querySelector('p');
+            if (p) p.textContent = 'Error initializing the application.';
+          }
+          return;
+        }
+
+        const setupImage = src => {
+          imageLoader.classList.remove('hidden');
+          errorMessageContainer.classList.add('hidden');
+          imageActionsOverlay.classList.add('hidden');
+          imageElement.classList.remove('loaded');
+          imageElement.removeAttribute('aria-busy'); // Use removeAttribute, not setting to empty string
+
+          if (!src) {
+            imageLoader.classList.add('hidden');
+            errorMessageContainer.classList.remove('hidden');
+            console.warn('Image src attribute is empty or missing.');
+            imageElement.setAttribute('aria-busy', 'false');
+            return;
+          }
+
+          imageElement.setAttribute('aria-busy', 'true');
+          imageElement.src = src;
+        };
+
+        imageElement.onload = () => {
+          imageLoader.classList.add('hidden');
+          imageElement.classList.add('loaded');
+          errorMessageContainer.classList.add('hidden');
+          imageActionsOverlay.classList.remove('hidden');
+          imageElement.setAttribute('aria-busy', 'false');
+        };
+
+        imageElement.onerror = () => {
+          imageLoader.classList.add('hidden');
+          errorMessageContainer.classList.remove('hidden');
+          imageActionsOverlay.classList.add('hidden');
+          imageElement.classList.remove('loaded');
+          imageElement.setAttribute('aria-busy', 'false');
+          console.error('Error loading image:', imageElement.src);
+        };
+
+        learnMoreButton.addEventListener('click', () => {
+          alert('Learn More button clicked!');
+        });
+        mobileButton.addEventListener('click', () => {
+          alert('Mobile view selected!');
+        });
+        userButton.addEventListener('click', () => {
+          alert('Person view selected!');
+        });
+        tvButton.addEventListener('click', () => {
+          alert('TV view selected!');
+        });
+        boxButton.addEventListener('click', () => {
+          alert('Box view selected!');
+        });
+
+        // Initial image load
+        setupImage(initialImageSrc);
+      });
+    </script>
+  </body>
+</html>

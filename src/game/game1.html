@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>消消乐达人 - Vanilla JS</title>
+    <style>
+      /* General Reset & Base Styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      body {
+        background-color: #f0f8ff; /* AliceBlue - soft, light sky blue */
+        color: #333333; /* Dark grey for text */
+        overflow-x: hidden;
+        min-height: 100vh;
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      /* Layout & Containers */
+      #game-root {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 1rem;
+        gap: 1.5rem; /* Space between info and game panels */
+        transition: opacity 0.3s ease-in-out;
+      }
+
+      #info-panel,
+      #game-area-panel {
+        background-color: #ffffff; /* White panels */
+        border-radius: 1rem; /* Rounded corners */
+        padding: 1.5rem; /* Default padding for info panel */
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); /* Softer shadow */
+        width: 100%;
+        max-width: 42rem; /* Consistent max-width for panels */
+      }
+
+      #info-panel {
+        text-align: center;
+      }
+
+      #game-area-panel {
+        position: relative;
+        padding: 0.75rem; /* Reduced padding for game area panel */
+      }
+
+      /* Typography & Text */
+      .title-gradient {
+        font-size: 2.5rem; /* Adjusted for cuter feel */
+        line-height: 1.1;
+        font-weight: 800;
+        color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+        background-image: linear-gradient(to right, #ff8a8a, #ffb38a, #ffd18a); /* Softer, cute gradient */
+        margin-bottom: 1rem;
+      }
+      @media (min-width: 640px) {
+        .title-gradient {
+          font-size: 3rem;
+        }
+      }
+      .animate-pulse-soft {
+        animation: pulse-soft 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes pulse-soft {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.02);
+        }
+      }
+
+      .instructions {
+        color: #555555;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+        max-width: 30rem;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .game-stats {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background-color: #f8f9fa; /* Light grey background for stats area */
+        border-radius: 0.75rem;
+        font-size: 0.9rem;
+      }
+      .game-stats div {
+        text-align: center;
+        color: #444444;
+      }
+      .game-stats span {
+        font-weight: 600;
+        color: #ff6b6b; /* Accent color for stat numbers */
+      }
+      #timer-display-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      }
+      .timer-warning-text {
+        color: #e53e3e !important; /* Soft red for warning */
+        animation: pulse-soft 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      /* Buttons */
+      .button {
+        transition: all 0.2s ease-in-out;
+        outline: none;
+        cursor: pointer;
+        border: none;
+        border-radius: 0.75rem; /* Rounded buttons */
+        font-weight: 700;
+        padding: 0.8rem 1.8rem;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+      .button:hover:not(:disabled) {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      }
+      .button:active:not(:disabled) {
+        transform: translateY(0px) scale(1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+      .button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      #main-action-button {
+        background-image: linear-gradient(to right, #ff8a8a, #ffb38a); /* Cute coral pink gradient */
+        color: #ffffff;
+      }
+
+      #give-up-button {
+        background-image: linear-gradient(to right, #ff7043, #f4511e); /* Deep orange/red for give up */
+        color: #ffffff;
+      }
+
+      #play-again-button {
+        background-image: linear-gradient(to right, #82e0aa, #a9dfbf); /* Cute green gradient */
+        color: #ffffff;
+      }
+      #thats-enough-button {
+        background-image: linear-gradient(to right, #b0bec5, #cfd8dc); /* Greyish gradient */
+        color: #37474f;
+      }
+
+      /* Game Specific Elements */
+      #game-board {
+        position: relative;
+        background-color: #e9ecef; /* Lighter board background */
+        border-radius: 0.75rem;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        border: 3px solid #dee2e6; /* Light border */
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 1.5rem; /* Space before collection slot */
+        /* width and height set by JS, but width also constrained by max-width */
+        max-width: 100%; /* Ensures board does not exceed parent width */
+      }
+
+      .tile {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-width: 2px;
+        border-style: solid;
+        border-radius: 0.375rem; /* rounded-md */
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        /* font-size set by JS */
+        font-weight: 700; /* font-bold */
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .tile-selectable {
+        background-color: #ffffff;
+        border-color: #ffb38a; /* Coral accent border */
+        color: #333333;
+        cursor: pointer;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.08);
+      }
+      .tile-selectable:hover {
+        background-color: #fff9c4; /* Light yellow hover */
+        border-color: #ff8a8a;
+        transform: scale(1.05);
+      }
+      .tile-blocked {
+        background-color: #cfd8dc; /* Light grey for blocked */
+        border-color: #b0bec5;
+        color: #78909c;
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      #collection-slot-container {
+        padding: 0.75rem;
+        background-color: #f8f9fa; /* Light background for slot */
+        border-radius: 0.75rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        border: 1px solid #dee2e6;
+      }
+      #collection-items {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        /* height is set dynamically by JS */
+        gap: 0.25rem; /* Small gap between items */
+      }
+
+      .collection-item-filled,
+      .collection-item-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.25rem;
+        /* width, height, and font-size set by JS */
+      }
+      .collection-item-filled {
+        background-color: #ffffff;
+        color: #333333;
+        font-weight: 700;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        border: 1px solid #ced4da;
+      }
+      .collection-item-empty {
+        background-color: #e9ecef; /* Light grey for empty slots */
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      #collection-full-message {
+        color: #e53e3e; /* Soft red for warning */
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+        margin-top: 0.5rem;
+      }
+
+      /* End Screen Specific */
+      #end-screen {
+        /* This will overlay everything */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(240, 248, 255, 0.95); /* AliceBlue with opacity */
+        backdrop-filter: blur(5px);
+        z-index: 100;
+        padding: 1rem;
+        text-align: center;
+      }
+      .end-screen-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+      }
+      .end-screen-title-won {
+        color: #48bb78; /* Cute green */
+      }
+      .end-screen-title-lost {
+        color: #f56565; /* Cute red */
+      }
+
+      #end-screen-image {
+        border-radius: 1rem;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        width: 8rem;
+        height: 8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 5rem; /* Large emoji */
+        background-color: #ffffff;
+        color: #333333;
+      }
+
+      #end-screen-details {
+        font-size: 1.25rem;
+        color: #4a5568;
+        margin-bottom: 0.75rem;
+      }
+      .end-stats p {
+        font-size: 1.1rem;
+        color: #555555;
+        margin-bottom: 0.5rem;
+      }
+      .end-stats span {
+        font-weight: 700;
+        color: #ff6b6b;
+      } /* Accent for end stats */
+      #end-screen-final-message {
+        margin-top: 1rem;
+        color: #555555;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-root">
+      <!-- Top Info Panel -->
+      <div id="info-panel">
+        <h1 class="title-gradient animate-pulse-soft">消消乐达人</h1>
+        <p class="instructions">
+          匹配三个相同的图案即可消除。只有未被覆盖的图案才能选择。
+          小心填满你的7格收集槽。在时间耗尽前清除所有图案以获得胜利！
+        </p>
+        <div id="game-stats-during-play" class="game-stats">
+          <div>图案: <span id="cleared-count-display">0</span> / <span id="total-tiles-display">0</span></div>
+          <div>得分: <span id="score-display">0</span></div>
+          <div>时间: <span id="timer-display-value">00:00</span></div>
+        </div>
+        <button id="main-action-button" class="button">开始游戏</button>
+        <button id="give-up-button" class="button hidden">认输</button>
+      </div>
+
+      <!-- Bottom Game Area Panel -->
+      <div id="game-area-panel">
+        <div id="game-board">
+          <!-- Tiles will be appended here by JavaScript -->
+        </div>
+        <div id="collection-slot-container">
+          <div id="collection-items">
+            <!-- Collection items will be appended here -->
+          </div>
+          <p id="collection-full-message" class="hidden">收集槽已满！</p>
+        </div>
+      </div>
+
+      <!-- End Screen (Overlay) -->
+      <div id="end-screen" class="hidden">
+        <h1 id="end-screen-message" class="end-screen-title"></h1>
+        <div id="end-screen-image"></div>
+        <p id="end-screen-details"></p>
+        <div class="end-stats">
+          <p>消除组数: <span id="end-score-display">0</span></p>
+          <p>剩余时间: <span id="end-time-left-display">0秒</span></p>
+          <p>总共局数: <span id="total-games-played-display">0</span></p>
+          <p>胜利局数: <span id="total-games-won-display">0</span></p>
+        </div>
+        <button id="play-again-button" class="button" style="margin-top: 1.5rem">再玩一次</button>
+        <button id="thats-enough-button" class="button" style="margin-top: 0.75rem">不玩了</button>
+        <p id="end-screen-final-message" class="hidden"></p>
+      </div>
+    </div>
+
+    <script type="module">
+      const GameState = {
+        READY: 'READY',
+        PLAYING: 'PLAYING',
+        WON: 'WON',
+        LOST: 'LOST',
+      };
+
+      const TILE_TYPES = ['🍎', '🍌', '🍇', '🍓', '🍑', '🍍', '🥝', '🍉', '🥭', '🥥', '🍒', '🍋', '🍊', '🥑', '🍆'];
+      const COLLECTION_CAPACITY = 7;
+      const GAME_DURATION_SECONDS = 240; // 4 minutes
+      const BOARD_WIDTH = 620; // Base width for design
+      const BOARD_HEIGHT = 700; // Base height for design
+      const TILE_SIZE = 68; // Base tile size for design
+      const MAX_LAYERS = 10; // Max stacking layers
+      const NUM_TOTAL_TILES_TO_GENERATE = 150;
+      const BORDER_EDGE_MARGIN = 3; // Small margin to prevent clipping at edges
+
+      let tiles = [];
+      let collection = [];
+      let timeLeft = GAME_DURATION_SECONDS;
+      let gameState = GameState.READY;
+      let score = 0;
+      let timerId = null;
+      let currentScaleFactor = 1;
+      let currentDynamicTileSize = TILE_SIZE;
+
+      let totalGamesPlayed = 0;
+      let totalGamesWon = 0;
+      let lostByGivingUp = false;
+
+      // DOM Elements
+      const gameRoot = document.getElementById('game-root');
+      const infoPanel = document.getElementById('info-panel');
+      const gameAreaPanel = document.getElementById('game-area-panel');
+      const endScreen = document.getElementById('end-screen');
+
+      const mainActionButton = document.getElementById('main-action-button');
+      const giveUpButton = document.getElementById('give-up-button');
+      const playAgainButton = document.getElementById('play-again-button');
+      const thatsEnoughButton = document.getElementById('thats-enough-button');
+
+      const scoreDisplay = document.getElementById('score-display');
+      const timerDisplayValueElement = document.getElementById('timer-display-value');
+      const gameBoardElement = document.getElementById('game-board');
+      const collectionItemsContainer = document.getElementById('collection-items');
+      const collectionFullMessage = document.getElementById('collection-full-message');
+      const clearedCountDisplay = document.getElementById('cleared-count-display');
+      const totalTilesDisplay = document.getElementById('total-tiles-display');
+
+      const endScreenMessage = document.getElementById('end-screen-message');
+      const endScreenImage = document.getElementById('end-screen-image');
+      const endScreenDetails = document.getElementById('end-screen-details');
+      const endScoreDisplay = document.getElementById('end-score-display');
+      const endTimeLeftDisplay = document.getElementById('end-time-left-display');
+      const totalGamesPlayedDisplay = document.getElementById('total-games-played-display');
+      const totalGamesWonDisplay = document.getElementById('total-games-won-display');
+      const endScreenFinalMessage = document.getElementById('end-screen-final-message');
+
+      gameBoardElement.style.width = `${BOARD_WIDTH}px`;
+
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      function updateGameDimensionsAndRender() {
+        const actualBoardWidth = gameBoardElement.clientWidth;
+        currentScaleFactor = Math.min(1, actualBoardWidth / BOARD_WIDTH);
+        currentDynamicTileSize = TILE_SIZE * currentScaleFactor;
+
+        gameBoardElement.style.height = `${BOARD_HEIGHT * currentScaleFactor}px`;
+
+        const collectionSlotItemHeight = currentDynamicTileSize * 1.1;
+        collectionItemsContainer.style.height = `${collectionSlotItemHeight}px`;
+
+        if (gameState === GameState.PLAYING || tiles.length > 0 || gameState === GameState.READY) {
+          renderGameBoard();
+          renderCollectionSlot();
+        }
+      }
+
+      function generateTilesVanilla(numTilesToPlace, maxStackDepth, typesToUse) {
+        const newTilesAttempt = [];
+        const placedTiles = [];
+
+        if (typesToUse.length === 0 || numTilesToPlace === 0) return [];
+
+        const actualNumTiles = Math.floor(numTilesToPlace / 3) * 3;
+        if (actualNumTiles === 0) return [];
+
+        const typesForGeneration = [];
+        const numSets = actualNumTiles / 3;
+        for (let i = 0; i < numSets; i++) {
+          const type = typesToUse[i % typesToUse.length];
+          typesForGeneration.push(type, type, type);
+        }
+
+        for (let i = typesForGeneration.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [typesForGeneration[i], typesForGeneration[j]] = [typesForGeneration[j], typesForGeneration[i]];
+        }
+
+        for (let i = 0; i < actualNumTiles; i++) {
+          newTilesAttempt.push({
+            id: `tile-${i}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            type: typesForGeneration[i],
+            x: 0,
+            y: 0,
+            zIndex: 0,
+            isCleared: false,
+            isCollected: false,
+          });
+        }
+
+        const gridCellSize = TILE_SIZE * 0.7;
+        const cols = Math.max(1, Math.floor(BOARD_WIDTH / gridCellSize));
+        const rows = Math.max(1, Math.floor(BOARD_HEIGHT / gridCellSize));
+        const occupiedCoarsePositions = new Set();
+
+        for (const tileData of newTilesAttempt) {
+          let x, y, z;
+          let attempts = 0;
+          const MAX_PLACEMENT_ATTEMPTS = 300;
+
+          do {
+            z = Math.floor(Math.random() * maxStackDepth);
+            const targetCol = Math.floor(Math.random() * cols);
+            const targetRow = Math.floor(Math.random() * rows);
+
+            const jitterX = (Math.random() - 0.5) * gridCellSize * 0.8;
+            const jitterY = (Math.random() - 0.5) * gridCellSize * 0.8;
+
+            x = targetCol * gridCellSize + TILE_SIZE / 2 + jitterX;
+            y = targetRow * gridCellSize + TILE_SIZE / 2 + jitterY;
+
+            // Ensure tile center is within board, accounting for TILE_SIZE and margin
+            x = Math.max(
+              TILE_SIZE / 2 + BORDER_EDGE_MARGIN,
+              Math.min(x, BOARD_WIDTH - TILE_SIZE / 2 - BORDER_EDGE_MARGIN),
+            );
+            y = Math.max(
+              TILE_SIZE / 2 + BORDER_EDGE_MARGIN,
+              Math.min(y, BOARD_HEIGHT - TILE_SIZE / 2 - BORDER_EDGE_MARGIN),
+            );
+
+            attempts++;
+          } while (
+            occupiedCoarsePositions.has(`${Math.floor(x / gridCellSize)}-${Math.floor(y / gridCellSize)}-${z}`) &&
+            attempts < MAX_PLACEMENT_ATTEMPTS
+          );
+
+          if (attempts < MAX_PLACEMENT_ATTEMPTS) {
+            occupiedCoarsePositions.add(`${Math.floor(x / gridCellSize)}-${Math.floor(y / gridCellSize)}-${z}`);
+            tileData.x = x;
+            tileData.y = y;
+            tileData.zIndex = z;
+            placedTiles.push(tileData);
+          }
+        }
+        return placedTiles;
+      }
+
+      function initializeGame() {
+        lostByGivingUp = false; // Reset flag for new game
+        totalGamesPlayed++;
+        gameState = GameState.PLAYING;
+
+        const numTileTypesToUse = Math.min(TILE_TYPES.length, 15);
+        tiles = generateTilesVanilla(NUM_TOTAL_TILES_TO_GENERATE, MAX_LAYERS, TILE_TYPES.slice(0, numTileTypesToUse));
+
+        collection = [];
+        timeLeft = GAME_DURATION_SECONDS;
+        score = 0;
+
+        if (timerId) clearInterval(timerId);
+        timerId = setInterval(updateTimer, 1000);
+
+        updateUIForGameState();
+        updateGameDimensionsAndRender();
+        updateScoreDisplay();
+        updateTimerDisplay();
+        updateClearedCount();
+      }
+
+      function updateTimer() {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          if (timerId) clearInterval(timerId);
+          timerId = null;
+          if (gameState === GameState.PLAYING) {
+            gameState = GameState.LOST;
+            updateUIForGameState();
+          }
+        }
+      }
+
+      function getSelectableTileIds() {
+        const selectable = new Set();
+        const activeTiles = tiles.filter(t => !t.isCleared && !t.isCollected);
+
+        activeTiles.forEach(tile => {
+          const selfLeft = tile.x - TILE_SIZE / 2;
+          const selfRight = tile.x + TILE_SIZE / 2;
+          const selfTop = tile.y - TILE_SIZE / 2;
+          const selfBottom = tile.y + TILE_SIZE / 2;
+
+          const isCovered = activeTiles.some(otherTile => {
+            if (otherTile.id === tile.id || otherTile.zIndex <= tile.zIndex) return false;
+
+            const otherLeft = otherTile.x - TILE_SIZE / 2;
+            const otherRight = otherTile.x + TILE_SIZE / 2;
+            const otherTop = otherTile.y - TILE_SIZE / 2;
+            const otherBottom = otherTile.y + TILE_SIZE / 2;
+
+            const overlapsHorizontally = selfLeft < otherRight && selfRight > otherLeft;
+            const overlapsVertically = selfTop < otherBottom && selfBottom > otherTop;
+            return overlapsHorizontally && overlapsVertically;
+          });
+          if (!isCovered) selectable.add(tile.id);
+        });
+        return selectable;
+      }
+
+      function renderGameBoard() {
+        gameBoardElement.innerHTML = '';
+        if (gameState !== GameState.PLAYING && gameState !== GameState.LOST && tiles.length === 0) return;
+
+        const selectableIds = getSelectableTileIds();
+        const sortedTilesForDOM = [...tiles].sort((a, b) => a.zIndex - b.zIndex);
+
+        sortedTilesForDOM.forEach(tile => {
+          if (tile.isCleared || tile.isCollected) return;
+
+          const tileEl = document.createElement('div');
+          tileEl.dataset.tileId = tile.id;
+          tileEl.style.left = `${(tile.x - TILE_SIZE / 2) * currentScaleFactor}px`;
+          tileEl.style.top = `${(tile.y - TILE_SIZE / 2) * currentScaleFactor}px`;
+          tileEl.style.zIndex = tile.zIndex;
+          tileEl.style.width = `${currentDynamicTileSize}px`;
+          tileEl.style.height = `${currentDynamicTileSize}px`;
+          tileEl.style.fontSize = `${currentDynamicTileSize * 0.55}px`;
+          tileEl.textContent = tile.type;
+          tileEl.classList.add('tile');
+          tileEl.setAttribute('aria-label', `图案 ${tile.type}`);
+
+          if (selectableIds.has(tile.id)) {
+            tileEl.classList.add('tile-selectable');
+            tileEl.title = `选择 ${tile.type}`;
+            tileEl.onclick = () => handleTileSelect(tile.id);
+            tileEl.setAttribute('role', 'button');
+            tileEl.tabIndex = 0;
+            tileEl.onkeydown = e => {
+              if (e.key === 'Enter' || e.key === ' ') handleTileSelect(tile.id);
+            };
+          } else {
+            tileEl.classList.add('tile-blocked');
+            tileEl.title = '被覆盖';
+            tileEl.setAttribute('aria-disabled', 'true');
+          }
+          gameBoardElement.appendChild(tileEl);
+        });
+      }
+
+      function handleTileSelect(tileId) {
+        if (gameState !== GameState.PLAYING) return;
+
+        const tileIndex = tiles.findIndex(t => t.id === tileId);
+        if (tileIndex === -1) return;
+        const selectedTileOriginal = tiles[tileIndex];
+
+        if (!selectedTileOriginal || selectedTileOriginal.isCleared || selectedTileOriginal.isCollected) return;
+
+        const selectableIds = getSelectableTileIds();
+        if (!selectableIds.has(tileId)) return;
+
+        tiles = tiles.map(t => (t.id === tileId ? { ...t, isCollected: true } : t));
+
+        collection.push({ ...selectedTileOriginal, isCollected: true });
+
+        renderGameBoard();
+        renderCollectionSlot();
+
+        checkForMatches();
+        checkWinLossConditions();
+      }
+
+      function renderCollectionSlot() {
+        collectionItemsContainer.innerHTML = '';
+        const slotTileSize = currentDynamicTileSize * 0.75;
+
+        for (let i = 0; i < COLLECTION_CAPACITY; i++) {
+          const tile = collection[i];
+          const slotEl = document.createElement('div');
+          slotEl.style.width = `${slotTileSize}px`;
+          slotEl.style.height = `${slotTileSize}px`;
+          slotEl.setAttribute('aria-label', tile ? `收集槽中的图案 ${tile.type}` : `收集槽空位 ${i + 1}`);
+
+          if (tile) {
+            slotEl.className = 'collection-item-filled';
+            slotEl.textContent = tile.type;
+            slotEl.style.fontSize = `${slotTileSize * 0.6}px`;
+          } else {
+            slotEl.className = 'collection-item-empty';
+          }
+          collectionItemsContainer.appendChild(slotEl);
+        }
+        collectionFullMessage.classList.toggle('hidden', collection.length < COLLECTION_CAPACITY);
+      }
+
+      function checkForMatches() {
+        if (collection.length < 3) return false;
+
+        const counts = {};
+        collection.forEach(tInColl => {
+          if (!counts[tInColl.type]) counts[tInColl.type] = [];
+          counts[tInColl.type].push(tInColl);
+        });
+
+        let aMatchWasMadeInThisInvocationCycle = false;
+
+        for (const type in counts) {
+          if (counts[type].length >= 3) {
+            const tilesOfThisTypeInCollection = counts[type];
+            const tilesFormingTheMatch = tilesOfThisTypeInCollection.slice(0, 3);
+            const idsOfTilesFormingTheMatch = tilesFormingTheMatch.map(t => t.id);
+
+            collection = collection.filter(tileInSlot => !idsOfTilesFormingTheMatch.includes(tileInSlot.id));
+
+            tiles = tiles.map(boardTile =>
+              idsOfTilesFormingTheMatch.includes(boardTile.id)
+                ? { ...boardTile, isCleared: true, isCollected: false }
+                : boardTile,
+            );
+            score++;
+            aMatchWasMadeInThisInvocationCycle = true;
+
+            checkForMatches();
+            break;
+          }
+        }
+
+        if (aMatchWasMadeInThisInvocationCycle) {
+          updateScoreDisplay();
+          renderCollectionSlot();
+          renderGameBoard();
+          updateClearedCount();
+        }
+        return aMatchWasMadeInThisInvocationCycle;
+      }
+
+      function checkWinLossConditions() {
+        if (gameState !== GameState.PLAYING) return;
+
+        const allCleared = tiles.length > 0 && tiles.every(t => t.isCleared);
+        if (allCleared) {
+          gameState = GameState.WON;
+          if (timerId) clearInterval(timerId);
+          timerId = null;
+          updateUIForGameState();
+          return;
+        }
+
+        if (collection.length >= COLLECTION_CAPACITY) {
+          let canMakeMatchInCurrentCollection = false;
+          const currentCollectionCounts = {};
+          collection.forEach(t => (currentCollectionCounts[t.type] = (currentCollectionCounts[t.type] || 0) + 1));
+          for (const type in currentCollectionCounts) {
+            if (currentCollectionCounts[type] >= 3) {
+              canMakeMatchInCurrentCollection = true;
+              break;
+            }
+          }
+
+          if (!canMakeMatchInCurrentCollection) {
+            gameState = GameState.LOST;
+            if (timerId) clearInterval(timerId);
+            timerId = null;
+            updateUIForGameState();
+          }
+        }
+      }
+
+      function updateScoreDisplay() {
+        scoreDisplay.textContent = score;
+      }
+
+      function updateTimerDisplay() {
+        const minutes = Math.floor(Math.max(0, timeLeft) / 60);
+        const seconds = Math.max(0, timeLeft) % 60;
+        timerDisplayValueElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds
+          .toString()
+          .padStart(2, '0')}`;
+
+        timerDisplayValueElement.classList.toggle(
+          'timer-warning-text',
+          timeLeft < 30 && timeLeft > 0 && gameState === GameState.PLAYING,
+        );
+      }
+
+      function updateClearedCount() {
+        const cleared = tiles.filter(t => t.isCleared).length;
+        const totalOnBoard = tiles.length;
+        clearedCountDisplay.textContent = cleared;
+        totalTilesDisplay.textContent = totalOnBoard;
+      }
+
+      function updateUIForGameState() {
+        gameRoot.style.opacity = '0';
+        setTimeout(() => {
+          if (gameState === GameState.READY) {
+            mainActionButton.textContent = '开始游戏';
+            mainActionButton.disabled = false;
+            mainActionButton.classList.remove('hidden');
+            giveUpButton.classList.add('hidden');
+
+            endScreen.classList.add('hidden');
+            endScreenFinalMessage.classList.add('hidden');
+            playAgainButton.disabled = false;
+            thatsEnoughButton.disabled = false;
+
+            clearedCountDisplay.textContent = '0';
+            totalTilesDisplay.textContent = '0';
+            scoreDisplay.textContent = '0';
+            timerDisplayValueElement.textContent = `${Math.floor(GAME_DURATION_SECONDS / 60)
+              .toString()
+              .padStart(2, '0')}:${(GAME_DURATION_SECONDS % 60).toString().padStart(2, '0')}`;
+            timerDisplayValueElement.classList.remove('timer-warning-text');
+            gameBoardElement.innerHTML = '';
+            collectionItemsContainer.innerHTML = '';
+            for (let i = 0; i < COLLECTION_CAPACITY; i++) {
+              const slotEl = document.createElement('div');
+              const slotTileSize = TILE_SIZE * 0.75 * currentScaleFactor;
+              slotEl.style.width = `${slotTileSize}px`;
+              slotEl.style.height = `${slotTileSize}px`;
+              slotEl.className = 'collection-item-empty';
+              slotEl.setAttribute('aria-label', `收集槽空位 ${i + 1}`);
+              collectionItemsContainer.appendChild(slotEl);
+            }
+          } else if (gameState === GameState.PLAYING) {
+            mainActionButton.classList.add('hidden');
+            giveUpButton.classList.remove('hidden');
+            giveUpButton.disabled = false;
+            endScreen.classList.add('hidden');
+          } else if (gameState === GameState.WON || gameState === GameState.LOST) {
+            if (gameState === GameState.WON) {
+              totalGamesWon++;
+            }
+            mainActionButton.textContent = '开始游戏'; // Reset for next game
+            mainActionButton.disabled = true; // Disabled because end screen is active
+            mainActionButton.classList.remove('hidden'); // Keep visible in info panel (behind overlay)
+            giveUpButton.classList.add('hidden');
+
+            endScreen.classList.remove('hidden');
+
+            const isWon = gameState === GameState.WON;
+            endScreenMessage.textContent = isWon ? '你赢了！' : '游戏结束';
+            endScreenMessage.className = `end-screen-title ${isWon ? 'end-screen-title-won' : 'end-screen-title-lost'}`;
+            endScreenImage.textContent = isWon ? '🥳' : '😢';
+
+            if (isWon) {
+              endScreenDetails.textContent = `恭喜！你清除了所有 ${tiles.length} 个图案！`;
+            } else {
+              // LOST
+              if (lostByGivingUp) {
+                endScreenDetails.textContent = '你选择了放弃。下次好运！';
+              } else if (timeLeft <= 0) {
+                endScreenDetails.textContent = '时间到！下次好运。';
+              } else if (collection.length >= COLLECTION_CAPACITY) {
+                endScreenDetails.textContent = '你的收集槽满了！';
+              } else {
+                endScreenDetails.textContent = '下次好运！';
+              }
+            }
+            endScoreDisplay.textContent = score;
+            endTimeLeftDisplay.textContent = `${Math.max(0, timeLeft)}秒`;
+            totalGamesPlayedDisplay.textContent = totalGamesPlayed;
+            totalGamesWonDisplay.textContent = totalGamesWon;
+            playAgainButton.disabled = false;
+            thatsEnoughButton.disabled = false;
+            endScreenFinalMessage.classList.add('hidden');
+          }
+          gameRoot.style.opacity = '1';
+        }, 150);
+      }
+
+      mainActionButton.addEventListener('click', () => {
+        if (gameState === GameState.WON || gameState === GameState.LOST || gameState === GameState.PLAYING) {
+          gameState = GameState.READY;
+          if (timerId) clearInterval(timerId);
+          timerId = null;
+        }
+        initializeGame();
+      });
+
+      giveUpButton.addEventListener('click', () => {
+        if (gameState === GameState.PLAYING) {
+          lostByGivingUp = true;
+          gameState = GameState.LOST;
+          if (timerId) clearInterval(timerId);
+          timerId = null;
+          timeLeft = 0; // Ensure time reflects loss if used in stats
+          updateUIForGameState();
+        }
+      });
+
+      playAgainButton.addEventListener('click', () => {
+        gameState = GameState.READY;
+        initializeGame();
+      });
+
+      thatsEnoughButton.addEventListener('click', () => {
+        console.log(`游戏会话结束。总共局数: ${totalGamesPlayed}, 胜利局数: ${totalGamesWon}。感谢游玩！`);
+        playAgainButton.disabled = true;
+        thatsEnoughButton.disabled = true;
+        endScreenFinalMessage.textContent = '感谢游玩！你可以关闭此窗口了。';
+        endScreenFinalMessage.classList.remove('hidden');
+      });
+
+      window.addEventListener('resize', debounce(updateGameDimensionsAndRender, 200));
+
+      updateUIForGameState();
+      updateGameDimensionsAndRender();
+    </script>
+  </body>
+</html>

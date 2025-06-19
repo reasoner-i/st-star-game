@@ -1,0 +1,11 @@
+{
+  "display_name": "我要当明星",
+  "loading_order": 5,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "",
+  "author": "lleng",
+  "version": "1.0.0",
+  "homePage": ""
+}
