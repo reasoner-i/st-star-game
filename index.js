@@ -2,10 +2,10 @@
  * 在指定的参考按钮右侧添加一个新按钮。
  * @param {string} referenceButtonId - 参考按钮的 ID (例如 'extensions_menu_button')。
  * @param {string} newButtonId - 新按钮的 ID。
- * @param {string} newButtonText - 新按钮上显示的文本。
+ * @param {string} newButtonTitle - 新按钮的 title 属性 (悬浮提示)。
  * @param {function} onClickHandler - 新按钮的点击事件处理函数。
  */
-function addCustomButton(referenceButtonId, newButtonId, newButtonText, onClickHandler) {
+function addCustomButton(referenceButtonId, newButtonId, newButtonTitle, onClickHandler) {
   // 1. 找到参考按钮
   const referenceButton = document.getElementById(referenceButtonId);
 
@@ -20,12 +20,12 @@ function addCustomButton(referenceButtonId, newButtonId, newButtonText, onClickH
     return;
   }
 
-  // 2. 创建新按钮
-  const newButton = document.createElement('button');
+  // 2. 创建新按钮，现在是 div
+  const newButton = document.createElement('div');
   newButton.id = newButtonId;
-  newButton.textContent = newButtonText;
-  // 你可以根据需要为新按钮添加样式类，例如参考按钮的类
-  // newButton.className = referenceButton.className;
+  newButton.title = newButtonTitle;
+  // 给按钮添加一个 class，方便用 CSS 来设置样式
+  newButton.classList.add('st-game-button', 'fa-solid', 'fa-house');
 
   // 添加点击事件
   if (typeof onClickHandler === 'function') {
@@ -55,5 +55,5 @@ function onReady(callback) {
 }
 
 onReady(() => {
-  addCustomButton('extensionsMenuButton', 'star_game_button', '主页', myNewButtonClickHandler);
+  addCustomButton('extensions_menu_button', 'star_game_button', '主页', myNewButtonClickHandler);
 });
